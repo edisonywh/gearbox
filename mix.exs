@@ -8,7 +8,11 @@ defmodule Gearbox.MixProject do
       elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      name: "Gearbox",
+      description: description(),
+      package: package(),
+      source_url: "https://github.com/edisonywh/gearbox"
     ]
   end
 
@@ -28,6 +32,18 @@ defmodule Gearbox.MixProject do
     [
       {:ex_doc, "~> 0.21.2", only: :dev},
       {:earmark, "~> 1.4", only: :dev}
+    ]
+  end
+
+  def description do
+    "Gearbox is a functional state machine with an easy-to-use API, inspired by both Fsm and Machinery"
+  end
+
+  def package do
+    [
+      maintainers: ["Edison Yap"],
+      licenses: ["MIT"],
+      links: %{GitHub: "https://github.com/edisonywh/gearbox"}
     ]
   end
 end
