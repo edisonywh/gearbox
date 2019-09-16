@@ -1,17 +1,58 @@
 defmodule Gearbox do
   @moduledoc """
-  -- Insert moduledoc
+  Gearbox is a functional state machine with an easy-to-use API, inspired by both
+  [Fsm](https://github.com/sasa1977/fsm) and [Machinery](https://github.com/joaomdmoura/machinery).
 
-  If no initial state is defined, the first item in the list of `states` will be used as initial.
+  Gearbox does not run in a process, so there's no potential for a GenServer bottleneck.
+  This way there's also less overhead as you won't need to setup a supervision tree/manage your state machine processes.
 
-  -- show some examples about usage with Ecto usage and with Process-backed usage
+  > Note: Gearbox is heavily inspired by [Machinery](https://github.com/joaomdmoura/machinery),
+    and also took inspiration from [Fsm](https://github.com/sasa1977/fsm).
+
+  Gearbox is **very** similar to [Machinery](https://github.com/joaomdmoura/machinery) in term of
+  the API usage, however it differs in the ways below:
+
+  - **Gearbox does not use a GenServer as a backing process**.
+    Since GenServer can be a potential bottleneck in a system, for that reason I think it's best
+    to leave process management to users of the library.
+  - `before_transition/3` and `after_transition/3` exposes the `current_state` and also `next_state`,
+    providing more options when defining callbacks.
+  - Gearbox does not ship with a `Phoenix Dashboard` view.
+    A really cool and great concept, but more often than not it is not needed and the added dependency
+    can prove more trouble than worth.
+
+  ## Rationale
+
+  Gearbox operates on the philosophy that it acts purely as a functional state machine, wherein
+  it does not care where your state is store (e.g: Ecto, GenServer), all Gearbox does is to help you
+  ensure state transitions happen the way you expect it to.
+
+  In most cases like for example `Order`, it is very likely that you don't need a process for that.
+  Just get the record out of the database, run it through Gearbox machine, then persist it back to database.
+
+  In some rare cases where you need to have a stateful state machine, for example a traffic light
+  that has an internal timer to shift from `red` (30s) -> `green` (30s) -> `yellow` (5s) -> `red`,
+  you are better off to use an `Agent`/`GenServer` where you have better control over backpressuring/
+  business logics.
+
+  As of now, Gearbox does not provide a way to create `events/actions` in a state machine.
+  This is because Gearbox is not a domain/context wrapper, I feel events/actions
+  that can trigger a state change should reside closer to your contexts, therefore I urge
+  users to group these events as domain events (contexts), rather than state machine events.
+
+  ## Options
+    - `:field` - used to retrieve the state of the given struct. Defaults to `:state`
+    - `:states` - list of finite states in the state machine
+    - `:initial` - initial state of the struct, if struct has `nil` state to begin with.
+      Defaults to the first item of `:states`
+    - `:transitions` - a map of possible transitions from `current_state` to `next_state`.
+      `*` wildcard is allowed to indicate any states.
 
   ## Example
 
-     defmodule Gearbox.Order do
+      defmodule Gearbox.Order do
         defstruct items: [], total: 0, status: nil
       end
-
 
       defmodule Gearbox.OrderMachine do
         use Gearbox,
@@ -28,7 +69,20 @@ defmodule Gearbox do
       iex> alias Gearbox.OrderMachine # Your machine
       iex> Gearbox.transition(%Order{}, OrderMachine, "paid")
       {:ok, %Gearbox.Order{items: [], status: "paid", total: 0}}
+
+  ## Ecto Example
+
+      {:ok, order} = Gearbox.transition(%Order{status: "pending_payment"}, OrderMachine, "paid")
+      Repo.insert!(order)
+
+      # or even
+
+      %Order{status: "pending_payment"}
+      |> Gearbox.transition!(OrderMachine, "paid")
+      |> Repo.insert!()
   """
+
+  @type state() :: atom | String.t()
 
   @doc """
   Hooks that happen *before* a transition happens.
@@ -41,10 +95,10 @@ defmodule Gearbox do
   > Note: This hook only gets triggered if the transition is valid.
   """
   @callback before_transition(
-              struct :: struct,
-              from :: atom | String.t(),
-              to :: atom | String.t()
-            ) :: struct
+              struct :: struct(),
+              from :: state(),
+              to :: state()
+            ) :: struct()
 
   @doc """
   Hooks that happen *after* a transition happens.
@@ -52,12 +106,17 @@ defmodule Gearbox do
   The function receives struct as the first argument, the current state as
   the second argument, and the desired state as the last argument.
 
-  You can do anything you want, the only requirement is to return a struct.
+  You can do anything you want from here, for example:
+  * persisting into database after every transition
+  * notifying customers if an order transitions to `cancelled`
+  * notifying admins whenever an order transitions to `paid`
+
+  The only requirement is to return a struct.
 
   > Note: This hook only gets triggered if the transition is valid.
   """
-  @callback after_transition(struct :: struct, from :: atom | String.t(), to :: atom | String.t()) ::
-              struct
+  @callback after_transition(struct :: struct(), from :: state(), to :: state()) ::
+              struct()
 
   @doc """
   Add guard conditions before transitioning.
@@ -65,27 +124,28 @@ defmodule Gearbox do
   The function receives struct as the first argument, the current state as
   the second argument, and the desired state as the last argument.
 
-  You can guard on both current_state and next_state, e.g:
+  You can guard on both `from` and `to` states, e.g:
 
-  * every time it transits out of `pending`, do X
-  * every time it transits into `paid`, do X
+  * Every time %Order{} transits out of `pending`, do X
+  * Every time %Order{} transits into `paid`, do Y
 
-  To **allow** a transition, return `{:ok, _anything}` tuple.
-  To **disallow** a transition, return `{:halt, reason}` tuple.
+  If this function returns a `{:halt, reason}`, execution of the transition will halt.
+  Any other things will allow the transition to go through.
 
   > Note: This hook only gets triggered if the transition is valid.
   """
-  @callback guard_transition(struct :: any, from :: any, to :: any) :: {:halt, any} | any
+  @callback guard_transition(struct :: any, from :: state(), to :: state()) :: {:halt, any} | any
 
   @wildcard "*"
 
   defmodule InvalidTransitionError do
+    @moduledoc """
+    This error is raised when you use `Gearbox.transition!/3`.
+
+    For a non-error raising variant, see `Gearbox.transition/3`
+    """
     defexception message: "State transition is not allowed."
   end
-
-  defguardp is_guard_allowed?(condition)
-            when not (is_tuple(condition) and elem(condition, 0) == :halt and
-                        tuple_size(condition) == 2)
 
   @doc false
   defmacro __using__(opts) do
@@ -132,7 +192,7 @@ defmodule Gearbox do
 
   Uses `Gearbox.transition/3` under the hood.
   """
-  @spec transition!(struct :: struct, machine :: any, next_state :: any) :: struct
+  @spec transition!(struct :: struct, machine :: any, next_state :: state()) :: struct
   def transition!(struct, machine, next_state) do
     case transition(struct, machine, next_state) do
       {:error, msg} ->
@@ -143,12 +203,17 @@ defmodule Gearbox do
     end
   end
 
+  @doc false
+  defguardp is_guard_allowed?(condition)
+            when not (is_tuple(condition) and elem(condition, 0) == :halt and
+                        tuple_size(condition) == 2)
+
   @doc """
   Transition a struct to a given state.
 
   returns an `{:ok, updated_struct}` or `{:error, message}` tuple.
   """
-  @spec transition(struct :: struct, machine :: any, next_state :: any) ::
+  @spec transition(struct :: struct, machine :: any, next_state :: state()) ::
           {:ok, struct} | {:error, String.t()}
   def transition(struct, machine, next_state) do
     field = machine.__machine_field__
@@ -180,14 +245,14 @@ defmodule Gearbox do
     end
   end
 
-  @spec get_possible_transitions(candidates :: map(), states :: list()) :: list()
+  @spec get_possible_transitions(candidates :: map(), states :: list(state())) :: list()
   defp get_possible_transitions(candidates, states) do
     Enum.reduce(candidates, [], fn {_k, destination}, acc ->
       destination |> cast_destination(states) |> List.flatten(acc)
     end)
   end
 
-  @spec cast_destination(dest :: list() | String.t(), states :: list()) :: list()
+  @spec cast_destination(dest :: list() | String.t(), states :: list(state())) :: list()
   defp cast_destination(@wildcard, states), do: states
   defp cast_destination(dest, _states) when is_list(dest), do: dest
   defp cast_destination(dest, _states) when is_binary(dest), do: [dest]
