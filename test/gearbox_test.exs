@@ -69,6 +69,23 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
+  test "transition/3 works for non-structs" do
+    gear = %{state: "neutral"}
+
+    defmodule GearboxMachine do
+      use Gearbox,
+        states: ~w(neutral drive),
+        transitions: %{
+          "neutral" => "drive"
+        }
+    end
+
+    assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
+    assert gear.state == "drive"
+  after
+    purge(GearboxMachine)
+  end
+
   test "transition/3 allows valid transition (not in list)" do
     gear = %Gear{state: "neutral"}
 
@@ -103,7 +120,7 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
-  test "transition/3 should allow wildcard neutral" do
+  test "transition/3 should allow wildcard input" do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
@@ -120,7 +137,7 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
-  test "transition/3 should allow wildcard driveination" do
+  test "transition/3 should allow wildcard destination" do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
@@ -177,7 +194,7 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
-  test "transition/3 disallow invalid transition (gearndefined neutral)" do
+  test "transition/3 disallow invalid transition (undefined input)" do
     gear = %Gear{state: "undefined"}
 
     defmodule GearboxMachine do
@@ -244,58 +261,6 @@ defmodule GearboxTest do
     assert_raise Gearbox.InvalidTransitionError, ~r/Cannot transition from/, fn ->
       Gearbox.transition!(gear, GearboxMachine, "invalid")
     end
-  after
-    purge(GearboxMachine)
-  end
-
-  test "before_transition/2 should allow override" do
-    gear = %Gear{state: "neutral"}
-
-    defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
-
-      def before_transition(struct, "neutral", "drive") do
-        struct =
-          struct
-          |> Map.put(:name, "jellybean")
-
-        struct
-      end
-    end
-
-    assert gear.name == nil
-    assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
-    assert gear.name == "jellybean"
-  after
-    purge(GearboxMachine)
-  end
-
-  test "after_transition/2 should allow override" do
-    gear = %Gear{state: "neutral"}
-
-    defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
-
-      def after_transition(struct, "neutral", "drive") do
-        struct =
-          struct
-          |> Map.put(:name, "jellybean")
-
-        struct
-      end
-    end
-
-    assert gear.name == nil
-    assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
-    assert gear.name == "jellybean"
   after
     purge(GearboxMachine)
   end
