@@ -15,8 +15,11 @@ defmodule Gearbox do
   - **Gearbox does not use a GenServer as a backing process**.
     Since GenServer can be a potential bottleneck in a system, for that reason I think it's best
     to leave process management to users of the library.
-  - `before_transition/3` and `after_transition/3` exposes the `current_state` and also `next_state`,
-    providing more options when defining callbacks.
+  - **No before/after callbacks**. Callback allow you to add side effects, but side effects violate
+    Single Responsibility Principle, and that can bring surprises to your codebase
+    (e.g: "How come everytime this transition happens, X happens?"). Gearbox nudges you to keep domain-logic
+    callbacks close to your contexts/domain events. Gearbox still ships with a `guard_transition/3` callback,
+    as that is intrinsic to state machines.
   - Gearbox does not ship with a `Phoenix Dashboard` view.
     A really cool and great concept, but more often than not it is not needed and the added dependency
     can prove more trouble than worth.
@@ -36,9 +39,18 @@ defmodule Gearbox do
   business logics.
 
   As of now, Gearbox does not provide a way to create `events/actions` in a state machine.
-  This is because Gearbox is not a domain/context wrapper, I feel events/actions
-  that can trigger a state change should reside closer to your contexts, therefore I urge
-  users to group these events as domain events (contexts), rather than state machine events.
+  This is because Gearbox is not a domain/context wrapper, Events and actions that can
+  trigger a state change should reside closer to your contexts, therefore I urge users to
+  group these events as domain events (contexts), rather than state machine events.
+
+  Gearbox previously shipped with `before_transition/3` and `after_transition/3` in `0.1.0`,
+  but after some discussions I have decided to take a deliberate decision to **remove** callbacks.
+  This is because callbacks by nature, allow you to add side effects, but side effects violate
+  **Single Responsibility Principle**, and callbacks can often bring unintended surprises
+  to your codebase (e.g: "How come everytime this transition happens, X happens?").
+
+  Therefore, Gearbox nudges you to keep domain/business-logic callbacks close to your contexts/domain events.
+  Gearbox still ships with a `guard_transition/3` callback, as that is intrinsic to state machines.
 
   ## Options
     - `:field` - used to retrieve the state of the given struct. Defaults to `:state`
@@ -83,40 +95,6 @@ defmodule Gearbox do
   """
 
   @type state() :: atom | String.t()
-
-  @doc """
-  Hooks that happen *before* a transition happens.
-
-  The function receives struct as the first argument, the current state as
-  the second argument, and the desired state as the last argument.
-
-  You can do anything you want, the only requirement is to return a `struct`.
-
-  > Note: This hook only gets triggered if the transition is valid.
-  """
-  @callback before_transition(
-              struct :: struct(),
-              from :: state(),
-              to :: state()
-            ) :: struct()
-
-  @doc """
-  Hooks that happen *after* a transition happens.
-
-  The function receives struct as the first argument, the current state as
-  the second argument, and the desired state as the last argument.
-
-  You can do anything you want from here, for example:
-  * persisting into database after every transition
-  * notifying customers if an order transitions to `cancelled`
-  * notifying admins whenever an order transitions to `paid`
-
-  The only requirement is to return a struct.
-
-  > Note: This hook only gets triggered if the transition is valid.
-  """
-  @callback after_transition(struct :: struct(), from :: state(), to :: state()) ::
-              struct()
 
   @doc """
   Add guard conditions before transitioning.
@@ -175,15 +153,9 @@ defmodule Gearbox do
       def __machine_transitions__(), do: unquote(Macro.escape(transitions))
 
       @doc false
-      def before_transition(struct, from, to), do: struct
-
-      @doc false
-      def after_transition(struct, from, to), do: struct
-
-      @doc false
       def guard_transition(struct, from, to), do: struct
 
-      defoverridable before_transition: 3, after_transition: 3, guard_transition: 3
+      defoverridable guard_transition: 3
     end
   end
 
@@ -227,11 +199,7 @@ defmodule Gearbox do
          true <- next_state in possible_transitions,
          condition when is_guard_allowed?(condition) <-
            machine.guard_transition(struct, current_state, next_state) do
-      struct =
-        struct
-        |> machine.before_transition(current_state, next_state)
-        |> Map.put(field, next_state)
-        |> machine.after_transition(current_state, next_state)
+      struct = Map.put(struct, field, next_state)
 
       {:ok, struct}
     else
