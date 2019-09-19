@@ -33,7 +33,7 @@ Get the latest version from [Hex](https://hex.pm/packages/gearbox)
 ```elixir
 def deps do
   [
-    {:gearbox, "~> 0.1.0"}
+    {:gearbox, "~> 0.2.0"}
   ]
 end
 ```
@@ -80,7 +80,7 @@ you are better off to use an `Agent`/`GenServer` where you have better control o
 business logics.
 
 As of now, Gearbox does not provide a way to create `events/actions` in a state machine.
-This is because Gearbox is not a domain/context wrapper, Events and actions that can
+This is because Gearbox is not a domain/context wrapper, events and actions that can
 trigger a state change should reside closer to your contexts, therefore I urge users to
 group these events as domain events (contexts), rather than state machine events.
 
