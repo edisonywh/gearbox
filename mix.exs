@@ -5,7 +5,7 @@ defmodule Gearbox.MixProject do
     [
       app: :gearbox,
       version: "0.2.0",
-      elixir: "~> 1.8.2",
+      elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
