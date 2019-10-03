@@ -137,6 +137,23 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
+  test "transition/3 should allow atoms" do
+    gear = %Gear{state: :neutral}
+
+    defmodule GearboxMachine do
+      use Gearbox,
+        states: ~w(neutral drive)a,
+        transitions: %{
+          neutral: :drive
+        }
+    end
+
+    assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, :drive)
+    assert gear.state == :drive
+  after
+    purge(GearboxMachine)
+  end
+
   test "transition/3 should allow wildcard destination" do
     gear = %Gear{state: "neutral"}
 

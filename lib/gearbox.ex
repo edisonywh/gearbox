@@ -220,8 +220,9 @@ defmodule Gearbox do
     end)
   end
 
-  @spec cast_destination(dest :: list() | String.t(), states :: list(state())) :: list()
+  @spec cast_destination(dest :: list() | String.t() | atom(), states :: list(state())) :: list()
   defp cast_destination(@wildcard, states), do: states
   defp cast_destination(dest, _states) when is_list(dest), do: dest
   defp cast_destination(dest, _states) when is_binary(dest), do: [dest]
+  defp cast_destination(dest, _states) when is_atom(dest), do: [dest]
 end
