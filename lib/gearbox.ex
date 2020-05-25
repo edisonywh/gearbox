@@ -160,11 +160,11 @@ defmodule Gearbox do
   end
 
   @doc """
-  Transition a struct to a given state. If transition is invalid, an `InvalidTransitionError` exception is raised.
+  Transition a struct or map to a given state. If transition is invalid, an `InvalidTransitionError` exception is raised.
 
   Uses `Gearbox.transition/3` under the hood.
   """
-  @spec transition!(struct :: struct, machine :: any, next_state :: state()) :: struct
+  @spec transition!(struct :: struct | map, machine :: any, next_state :: state()) :: struct | map
   def transition!(struct, machine, next_state) do
     case transition(struct, machine, next_state) do
       {:error, msg} ->
@@ -181,12 +181,12 @@ defmodule Gearbox do
                         tuple_size(condition) == 2)
 
   @doc """
-  Transition a struct to a given state.
+  Transition a struct or a map to a given state.
 
-  returns an `{:ok, updated_struct}` or `{:error, message}` tuple.
+  returns an `{:ok, updated_struct_or_map}` or `{:error, message}` tuple.
   """
-  @spec transition(struct :: struct, machine :: any, next_state :: state()) ::
-          {:ok, struct} | {:error, String.t()}
+  @spec transition(struct :: struct | map, machine :: any, next_state :: state()) ::
+          {:ok, struct | map} | {:error, String.t()}
   def transition(struct, machine, next_state) do
     field = machine.__machine_field__
     states = machine.__machine_states__
