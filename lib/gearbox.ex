@@ -183,11 +183,32 @@ defmodule Gearbox do
   @doc """
   Transition a struct or a map to a given state.
 
-  returns an `{:ok, updated_struct_or_map}` or `{:error, message}` tuple.
+  Returns an `{:ok, updated_struct_or_map}` or `{:error, message}` tuple.
   """
   @spec transition(struct :: struct | map, machine :: any, next_state :: state()) ::
           {:ok, struct | map} | {:error, String.t()}
   def transition(struct, machine, next_state) do
+    case validate_transition(struct, machine, next_state) do
+      {:ok, nil} ->
+        struct = Map.put(struct, machine.__machine_field__, next_state)
+        {:ok, struct}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Checks if the transition should be made.
+  Mainly for internal use to support `transition/3` and other methods performing transition actions.
+
+  Returns a tuple containing the outcome:
+    - `{:ok, nil}` if it can transition or,
+    - `{:error, reason}` if transition cannot be made.
+  """
+  @spec validate_transition(struct :: struct | map, machine :: any, next_state :: state()) ::
+          {:ok, any} | {:error, String.t()}
+  def validate_transition(struct, machine, next_state) do
     field = machine.__machine_field__
     states = machine.__machine_states__
     initial_state = machine.__machine_states__(:initial)
@@ -199,9 +220,7 @@ defmodule Gearbox do
          true <- next_state in possible_transitions,
          condition when is_guard_allowed?(condition) <-
            machine.guard_transition(struct, current_state, next_state) do
-      struct = Map.put(struct, field, next_state)
-
-      {:ok, struct}
+      {:ok, nil}
     else
       false ->
         reason = "Cannot transition from `#{current_state}` to `#{next_state}`"
