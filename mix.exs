@@ -31,7 +31,8 @@ defmodule Gearbox.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.21.2", only: :dev},
-      {:earmark, "~> 1.4", only: :dev}
+      {:earmark, "~> 1.4", only: :dev},
+      {:ecto, "~> 3.4", optional: true}
     ]
   end
 
