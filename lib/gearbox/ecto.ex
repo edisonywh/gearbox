@@ -1,5 +1,4 @@
 if Code.ensure_loaded?(Ecto) do
-
   defmodule Gearbox.Ecto do
     @moduledoc """
     Ecto support module for Gearbox.
@@ -25,15 +24,14 @@ if Code.ensure_loaded?(Ecto) do
           {:ok, changeset}
 
         {:error, reason} ->
-          error_changeset = struct
-          |> struct()
-          |> Ecto.Changeset.change()
-          |> Ecto.Changeset.add_error(machine.__machine_field__, reason)
+          error_changeset =
+            struct
+            |> struct()
+            |> Ecto.Changeset.change()
+            |> Ecto.Changeset.add_error(machine.__machine_field__, reason)
+
           {:error, error_changeset}
       end
-
-
     end
   end
-
 end

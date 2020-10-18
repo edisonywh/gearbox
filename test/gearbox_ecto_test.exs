@@ -8,9 +8,9 @@ defmodule GearboxTest.Ecto do
     use Ecto.Schema
 
     schema "gears" do
-      field :name, :string
-      field :status, :string
-      field :state, :string
+      field(:name, :string)
+      field(:status, :string)
+      field(:state, :string)
     end
   end
 
@@ -25,7 +25,9 @@ defmodule GearboxTest.Ecto do
         }
     end
 
-    assert {:ok, %Ecto.Changeset{} = gear_changeset} = Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "drive")
+    assert {:ok, %Ecto.Changeset{} = gear_changeset} =
+             Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "drive")
+
     assert gear_changeset.valid?
     assert Ecto.Changeset.get_change(gear_changeset, :state) == "drive"
   after
@@ -43,7 +45,9 @@ defmodule GearboxTest.Ecto do
         }
     end
 
-    assert {:error, %Ecto.Changeset{} = err_changeset} = Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "parking")
+    assert {:error, %Ecto.Changeset{} = err_changeset} =
+             Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "parking")
+
     assert Keyword.has_key?(err_changeset.errors, :state)
     assert !err_changeset.valid?
     {msg, _addl} = err_changeset.errors[:state]
@@ -63,7 +67,9 @@ defmodule GearboxTest.Ecto do
         }
     end
 
-    assert {:error, %Ecto.Changeset{} = err_changeset} = Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "drive")
+    assert {:error, %Ecto.Changeset{} = err_changeset} =
+             Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "drive")
+
     assert !err_changeset.valid?
     assert Keyword.has_key?(err_changeset.errors, :state)
     {msg, _addl} = err_changeset.errors[:state]
@@ -83,7 +89,9 @@ defmodule GearboxTest.Ecto do
         }
     end
 
-    assert {:error, %Ecto.Changeset{} = err_changeset} = Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "undefined")
+    assert {:error, %Ecto.Changeset{} = err_changeset} =
+             Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "undefined")
+
     assert !err_changeset.valid?
     assert Keyword.has_key?(err_changeset.errors, :state)
     {msg, _addl} = err_changeset.errors[:state]

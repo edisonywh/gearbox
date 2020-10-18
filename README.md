@@ -145,6 +145,23 @@ end
 
 > **Note** that guard transitions will only be run if transition is valid.
 
+### Ecto Support
+If your project uses Ecto, you can use the `Gearbox.Ecto` module to create a changeset based on the outcome of the transition. The original struct will not be modified.  
+A successful transition will return a changeset with the change applied, and an unsuccessful one will return a changeset with the appropriate error message.
+
+````elixir
+# similar to the above example
+def pay(user, order) do
+  with {:ok, changeset} <- Gearbox.Ecto.transition_changeset(order, PaymentMachine, "paid")
+  do
+    Repo.update(changeset)
+  else
+    {:error, changeset} ->
+      # handle error here
+  end
+end
+````
+
 ## Contributions
 Contributions are very welcomed, but please first [open an issue](https://github.com/edisonywh/gearbox/issues/new) so we can align and discuss before any development begins.
 
