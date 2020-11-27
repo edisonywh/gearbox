@@ -33,7 +33,7 @@ Get the latest version from [Hex](https://hex.pm/packages/gearbox)
 ```elixir
 def deps do
   [
-    {:gearbox, "~> 0.2.1"}
+    {:gearbox, "~> 0.3.1"}
   ]
 end
 ```
