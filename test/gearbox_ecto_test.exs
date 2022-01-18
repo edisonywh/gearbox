@@ -100,7 +100,6 @@ defmodule GearboxTest.Ecto do
     purge(GearboxMachine)
   end
 
-  @tag :only
   test "transition_changeset/3 should return a valid Ecto changeset when passed another changeset" do
     gear = %GearSchema{state: "neutral"}
 
