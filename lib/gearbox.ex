@@ -209,6 +209,8 @@ defmodule Gearbox do
   @spec validate_transition(struct :: struct | map, machine :: any, next_state :: state()) ::
           {:ok, any} | {:error, String.t()}
   def validate_transition(struct, machine, next_state) do
+    struct = maybe_apply_changeset_changes(struct)
+
     field = machine.__machine_field__
     states = machine.__machine_states__
     initial_state = machine.__machine_states__(:initial)
@@ -231,6 +233,11 @@ defmodule Gearbox do
         {:error, reason}
     end
   end
+
+  defp maybe_apply_changeset_changes(%Ecto.Changeset{} = changeset),
+    do: Ecto.Changeset.apply_changes(changeset)
+
+  defp maybe_apply_changeset_changes(struct), do: struct
 
   @spec get_possible_transitions(candidates :: map(), states :: list(state())) :: list()
   defp get_possible_transitions(candidates, states) do

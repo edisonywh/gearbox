@@ -100,6 +100,31 @@ defmodule GearboxTest.Ecto do
     purge(GearboxMachine)
   end
 
+  @tag :only
+  test "transition_changeset/3 should return a valid Ecto changeset when passed another changeset" do
+    gear = %GearSchema{state: "neutral"}
+
+    defmodule GearboxMachine do
+      use Gearbox,
+        states: ~w(neutral drive next),
+        transitions: %{
+          "neutral" => ~w(drive),
+          "drive" => ~w(next)
+        }
+    end
+
+    assert {:ok, %Ecto.Changeset{} = gear_changeset} =
+             Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "drive")
+
+    assert {:ok, %Ecto.Changeset{} = gear_changeset} =
+             Gearbox.Ecto.transition_changeset(gear_changeset, GearboxMachine, "next")
+
+    assert gear_changeset.valid?
+    assert Ecto.Changeset.get_change(gear_changeset, :state) == "next"
+  after
+    purge(GearboxMachine)
+  end
+
   defp purge(module) do
     :code.delete(module)
     :code.purge(module)
