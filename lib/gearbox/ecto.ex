@@ -18,6 +18,8 @@ if Code.ensure_loaded?(Ecto) do
     @spec transition_changeset(struct :: struct, machine :: any, next_state :: Gearbox.state()) ::
             {:ok, struct | map} | {:error, String.t()}
     def transition_changeset(struct, machine, next_state) do
+      struct = maybe_apply_changeset_changes(struct)
+
       case validate_transition(struct, machine, next_state) do
         {:ok, nil} ->
           changeset = Ecto.Changeset.change(struct, %{machine.__machine_field__ => next_state})
@@ -33,5 +35,10 @@ if Code.ensure_loaded?(Ecto) do
           {:error, error_changeset}
       end
     end
+
+    defp maybe_apply_changeset_changes(%Ecto.Changeset{} = changeset),
+      do: Ecto.Changeset.apply_changes(changeset)
+
+    defp maybe_apply_changeset_changes(struct), do: struct
   end
 end
