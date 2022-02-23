@@ -18,9 +18,9 @@ if Code.ensure_loaded?(Ecto) do
     @spec transition_changeset(struct :: struct, machine :: any, next_state :: Gearbox.state()) ::
             {:ok, struct | map} | {:error, String.t()}
     def transition_changeset(struct, machine, next_state) do
-      struct = maybe_apply_changeset_changes(struct)
+      validation_struct = maybe_apply_changeset_changes(struct)
 
-      case validate_transition(struct, machine, next_state) do
+      case validate_transition(validation_struct, machine, next_state) do
         {:ok, nil} ->
           changeset = Ecto.Changeset.change(struct, %{machine.__machine_field__ => next_state})
           {:ok, changeset}
