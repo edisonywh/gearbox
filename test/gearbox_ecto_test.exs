@@ -112,14 +112,14 @@ defmodule GearboxTest.Ecto do
         }
     end
 
-    assert {:ok, %Ecto.Changeset{} = gear_changeset} =
-             Gearbox.Ecto.transition_changeset(gear, GearboxMachine, "drive")
+    changeset = Ecto.Changeset.change(gear, %{name: "Cybertruck", state: "drive"})
 
     assert {:ok, %Ecto.Changeset{} = gear_changeset} =
-             Gearbox.Ecto.transition_changeset(gear_changeset, GearboxMachine, "next")
+             Gearbox.Ecto.transition_changeset(changeset, GearboxMachine, "next")
 
     assert gear_changeset.valid?
     assert Ecto.Changeset.get_change(gear_changeset, :state) == "next"
+    assert Ecto.Changeset.get_change(gear_changeset, :name) == "Cybertruck"
   after
     purge(GearboxMachine)
   end
