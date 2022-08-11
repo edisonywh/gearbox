@@ -16,7 +16,7 @@ if Code.ensure_loaded?(Ecto) do
       - `{:error, error_changeset}` with an error populated if transition cannot be made.
     """
     @spec transition_changeset(struct :: struct, machine :: any, next_state :: Gearbox.state()) ::
-            {:ok, struct | map} | {:error, String.t()}
+            {:ok, struct | map} | {:error, Ecto.Changeset.t()}
     def transition_changeset(struct, machine, next_state) do
       validation_struct = maybe_apply_changeset_changes(struct)
 
