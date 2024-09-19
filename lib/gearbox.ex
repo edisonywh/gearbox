@@ -190,7 +190,7 @@ defmodule Gearbox do
   def transition(struct, machine, next_state) do
     case validate_transition(struct, machine, next_state) do
       {:ok, nil} ->
-        struct = Map.put(struct, machine.__machine_field__, next_state)
+        struct = Map.put(struct, machine.__machine_field__(), next_state)
         {:ok, struct}
 
       {:error, reason} ->
@@ -209,11 +209,11 @@ defmodule Gearbox do
   @spec validate_transition(struct :: struct | map, machine :: any, next_state :: state()) ::
           {:ok, any} | {:error, String.t()}
   def validate_transition(struct, machine, next_state) do
-    field = machine.__machine_field__
-    states = machine.__machine_states__
+    field = machine.__machine_field__()
+    states = machine.__machine_states__()
     initial_state = machine.__machine_states__(:initial)
     current_state = Map.get(struct, field) || initial_state
-    transitions = machine.__machine_transitions__
+    transitions = machine.__machine_transitions__()
 
     with candidates <- Map.take(transitions, [current_state, @wildcard]),
          possible_transitions = get_possible_transitions(candidates, states),

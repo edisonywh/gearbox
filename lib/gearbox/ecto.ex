@@ -22,7 +22,7 @@ if Code.ensure_loaded?(Ecto) do
 
       case validate_transition(validation_struct, machine, next_state) do
         {:ok, nil} ->
-          changeset = Ecto.Changeset.change(struct, %{machine.__machine_field__ => next_state})
+          changeset = Ecto.Changeset.change(struct, %{machine.__machine_field__() => next_state})
           {:ok, changeset}
 
         {:error, reason} ->
@@ -30,7 +30,7 @@ if Code.ensure_loaded?(Ecto) do
             struct
             |> struct()
             |> Ecto.Changeset.change()
-            |> Ecto.Changeset.add_error(machine.__machine_field__, reason)
+            |> Ecto.Changeset.add_error(machine.__machine_field__(), reason)
 
           {:error, error_changeset}
       end
