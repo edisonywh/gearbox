@@ -30,9 +30,9 @@ defmodule Gearbox.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.28.0", only: :dev},
+      {:ex_doc, "~> 0.39.1", only: :dev},
       {:earmark, "~> 1.4", only: :dev},
-      {:ecto, "~> 3.4", optional: true}
+      {:ecto, "~> 3.13", optional: true}
     ]
   end
 

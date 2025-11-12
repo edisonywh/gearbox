@@ -52,13 +52,18 @@ defmodule Gearbox do
   Therefore, Gearbox nudges you to keep domain/business-logic callbacks close to your contexts/domain events.
   Gearbox still ships with a `guard_transition/3` callback, as that is intrinsic to state machines.
 
-  ## Options
-    - `:field` - used to retrieve the state of the given struct. Defaults to `:state`
-    - `:states` - list of finite states in the state machine
-    - `:initial` - initial state of the struct, if struct has `nil` state to begin with.
-      Defaults to the first item of `:states`
-    - `:transitions` - a map of possible transitions from `current_state` to `next_state`.
-      `*` wildcard is allowed to indicate any states.
+  ## Defining a machine
+
+  To create a state machine, you need to define a module that implements the `Gearbox.Machine` behaviour.
+  This behaviour requires you to implement a few callbacks to define your state machine.
+
+  ### Callbacks
+
+  - `field/0` - The field in your struct that holds the state.
+  - `states/0` - A list of all possible states.
+  - `initial_state/0` - The initial state of the machine.
+  - `transitions/0` - A map of allowed transitions. `*` wildcard is allowed to indicate any states.
+  - `guard_transition/3` (optional) - A callback to guard transitions.
 
   ## Example
 
@@ -67,14 +72,17 @@ defmodule Gearbox do
       end
 
       defmodule Gearbox.OrderMachine do
-        use Gearbox,
-          field: :status,
-          states: ~w(pending_payment cancelled paid pending_collection refunded fulfilled),
-          initial: "pending_payment",
-          transitions: %{
+        @behaviour Gearbox.Machine
+
+        def field, do: :status
+        def states, do: ~w(pending_payment cancelled paid pending_collection refunded fulfilled)
+        def initial_state, do: "pending_payment"
+        def transitions do
+          %{
             "pending_payment" => ~w(cancelled paid),
             "paid" => ~w(pending_collection refunded),
           }
+        end
       end
 
       iex> alias Gearbox.Order # Your struct
@@ -96,25 +104,50 @@ defmodule Gearbox do
 
   @type state() :: atom | String.t()
 
-  @doc """
-  Add guard conditions before transitioning.
-
-  The function receives struct as the first argument, the current state as
-  the second argument, and the desired state as the last argument.
-
-  You can guard on both `from` and `to` states, e.g:
-
-  * Every time %Order{} transits out of `pending`, do X
-  * Every time %Order{} transits into `paid`, do Y
-
-  If this function returns a `{:halt, reason}`, execution of the transition will halt.
-  Any other things will allow the transition to go through.
-
-  > Note: This hook only gets triggered if the transition is valid.
-  """
-  @callback guard_transition(struct :: any, from :: state(), to :: state()) :: {:halt, any} | any
-
   @wildcard "*"
+
+  defmodule Machine do
+    @moduledoc """
+    The behaviour for a Gearbox state machine.
+
+    State machine modules must implement this behaviour to be used with `Gearbox`.
+    """
+
+    @type state() :: atom | String.t()
+
+    @doc "The field in the struct that holds the state."
+    @callback field() :: atom
+
+    @doc "The list of all possible states."
+    @callback states() :: list(state())
+
+    @doc "The initial state."
+    @callback initial_state() :: state()
+
+    @doc "The map of transitions."
+    @callback transitions() :: map()
+
+    @doc """
+    Add guard conditions before transitioning.
+
+    The function receives struct as the first argument, the current state as
+    the second argument, and the desired state as the last argument.
+
+    You can guard on both `from` and `to` states, e.g:
+
+    * Every time %Order{} transits out of `pending`, do X
+    * Every time %Order{} transits into `paid`, do Y
+
+    If this function returns a `{:halt, reason}`, execution of the transition will halt.
+    Any other things will allow the transition to go through.
+
+    > Note: This hook only gets triggered if the transition is valid.
+    """
+    @callback guard_transition(struct :: any, from :: state(), to :: state()) ::
+                {:halt, any} | any
+
+    @optional_callbacks guard_transition: 3
+  end
 
   defmodule InvalidTransitionError do
     @moduledoc """
@@ -125,46 +158,13 @@ defmodule Gearbox do
     defexception message: "State transition is not allowed."
   end
 
-  @doc false
-  defmacro __using__(opts) do
-    field = Keyword.get(opts, :field, :state)
-    states = Keyword.get(opts, :states)
-    initial = Keyword.get(opts, :initial)
-    transitions = Keyword.get(opts, :transitions)
-
-    quote bind_quoted: [
-            field: field,
-            states: states,
-            initial: initial,
-            transitions: transitions
-          ] do
-      @behaviour Gearbox
-
-      @doc false
-      def __machine_field__(), do: unquote(field)
-
-      @doc false
-      def __machine_states__(:initial), do: unquote(initial || List.first(states))
-
-      @doc false
-      def __machine_states__(), do: unquote(states)
-
-      @doc false
-      def __machine_transitions__(), do: unquote(Macro.escape(transitions))
-
-      @doc false
-      def guard_transition(struct, from, to), do: struct
-
-      defoverridable guard_transition: 3
-    end
-  end
-
   @doc """
   Transition a struct or map to a given state. If transition is invalid, an `InvalidTransitionError` exception is raised.
 
   Uses `Gearbox.transition/3` under the hood.
   """
-  @spec transition!(struct :: struct | map, machine :: any, next_state :: state()) :: struct | map
+  @spec transition!(struct :: struct | map, machine :: module, next_state :: state()) ::
+          struct | map
   def transition!(struct, machine, next_state) do
     case transition(struct, machine, next_state) do
       {:error, msg} ->
@@ -185,12 +185,12 @@ defmodule Gearbox do
 
   Returns an `{:ok, updated_struct_or_map}` or `{:error, message}` tuple.
   """
-  @spec transition(struct :: struct | map, machine :: any, next_state :: state()) ::
+  @spec transition(struct :: struct | map, machine :: module, next_state :: state()) ::
           {:ok, struct | map} | {:error, String.t()}
   def transition(struct, machine, next_state) do
     case validate_transition(struct, machine, next_state) do
       {:ok, nil} ->
-        struct = Map.put(struct, machine.__machine_field__(), next_state)
+        struct = Map.put(struct, machine.field(), next_state)
         {:ok, struct}
 
       {:error, reason} ->
@@ -206,20 +206,20 @@ defmodule Gearbox do
     - `{:ok, nil}` if it can transition or,
     - `{:error, reason}` if transition cannot be made.
   """
-  @spec validate_transition(struct :: struct | map, machine :: any, next_state :: state()) ::
+  @spec validate_transition(struct :: struct | map, machine :: module, next_state :: state()) ::
           {:ok, any} | {:error, String.t()}
   def validate_transition(struct, machine, next_state) do
-    field = machine.__machine_field__()
-    states = machine.__machine_states__()
-    initial_state = machine.__machine_states__(:initial)
+    field = machine.field()
+    states = machine.states()
+    initial_state = machine.initial_state()
     current_state = Map.get(struct, field) || initial_state
-    transitions = machine.__machine_transitions__()
+    transitions = machine.transitions()
 
     with candidates <- Map.take(transitions, [current_state, @wildcard]),
          possible_transitions = get_possible_transitions(candidates, states),
          true <- next_state in possible_transitions,
          condition when is_guard_allowed?(condition) <-
-           machine.guard_transition(struct, current_state, next_state) do
+           maybe_guard_transition(machine, struct, current_state, next_state) do
       {:ok, nil}
     else
       false ->
@@ -229,6 +229,14 @@ defmodule Gearbox do
 
       {:halt, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp maybe_guard_transition(machine, struct, from, to) do
+    if function_exported?(machine, :guard_transition, 3) do
+      machine.guard_transition(struct, from, to)
+    else
+      struct
     end
   end
 
