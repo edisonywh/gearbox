@@ -2,8 +2,6 @@ defmodule GearboxTest.Ecto do
   use ExUnit.Case
   doctest Gearbox.Ecto
 
-  alias GearboxTest.Ecto.GearboxMachine
-
   defmodule GearSchema do
     use Ecto.Schema
 
@@ -18,11 +16,12 @@ defmodule GearboxTest.Ecto do
     gear = %GearSchema{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:ok, %Ecto.Changeset{} = gear_changeset} =
@@ -38,11 +37,12 @@ defmodule GearboxTest.Ecto do
     gear = %GearSchema{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive parking),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive parking)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:error, %Ecto.Changeset{} = err_changeset} =
@@ -60,11 +60,12 @@ defmodule GearboxTest.Ecto do
     gear = %GearSchema{state: "undefined"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:error, %Ecto.Changeset{} = err_changeset} =
@@ -82,11 +83,12 @@ defmodule GearboxTest.Ecto do
     gear = %GearSchema{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:error, %Ecto.Changeset{} = err_changeset} =
@@ -104,9 +106,14 @@ defmodule GearboxTest.Ecto do
     gear = %GearSchema{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive next),
-        transitions: %{
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive next)
+      def initial_state, do: "neutral"
+
+      def transitions,
+        do: %{
           "neutral" => ~w(drive),
           "drive" => ~w(next)
         }

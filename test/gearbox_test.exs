@@ -2,8 +2,6 @@ defmodule GearboxTest do
   use ExUnit.Case
   doctest Gearbox
 
-  alias GearboxTest.GearboxMachine
-
   defmodule Gear do
     defstruct name: nil, status: nil, state: nil
   end
@@ -12,12 +10,12 @@ defmodule GearboxTest do
     gear = %Gear{status: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        field: :status,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => "drive"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :status
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => "drive"}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -30,17 +28,15 @@ defmodule GearboxTest do
     gear = %Gear{status: nil}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        field: :status,
-        initial: "drive",
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => "drive",
-          "drive" => "neutral"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :status
+      def initial_state, do: "drive"
+      def states, do: ~w(neutral drive)
+      def transitions, do: %{"neutral" => "drive", "drive" => "neutral"}
     end
 
-    assert "drive" == GearboxMachine.__machine_states__(:initial)
+    assert "drive" == GearboxMachine.initial_state()
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "neutral")
     assert gear.status == "neutral"
@@ -48,20 +44,19 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
-  test ":initial should default to first item in states" do
+  test "initial state is used when struct field is nil" do
     gear = %Gear{status: nil}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        field: :status,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => "drive",
-          "drive" => "neutral"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :status
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => "drive", "drive" => "neutral"}
     end
 
-    assert "neutral" == GearboxMachine.__machine_states__(:initial)
+    assert "neutral" == GearboxMachine.initial_state()
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
     assert gear.status == "drive"
@@ -73,11 +68,12 @@ defmodule GearboxTest do
     gear = %{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => "drive"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => "drive"}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -90,11 +86,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => "drive"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => "drive"}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -107,11 +104,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -124,11 +122,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "*" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"*" => ~w(drive)}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -141,11 +140,12 @@ defmodule GearboxTest do
     gear = %Gear{state: :neutral}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive)a,
-        transitions: %{
-          neutral: :drive
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)a
+      def initial_state, do: :neutral
+      def transitions, do: %{neutral: :drive}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, :drive)
@@ -158,11 +158,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => "*"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => "*"}
     end
 
     assert {:ok, gear} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -175,11 +176,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral parking drive),
-        transitions: %{
-          "*" => "*"
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral parking drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"*" => "*"}
     end
 
     with {:ok, gear} <- Gearbox.transition(gear, GearboxMachine, "parking"),
@@ -197,11 +199,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive parking),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive parking)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:error, msg} = Gearbox.transition(gear, GearboxMachine, "parking")
@@ -215,11 +218,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "undefined"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:error, msg} = Gearbox.transition(gear, GearboxMachine, "drive")
@@ -233,11 +237,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert {:error, msg} = Gearbox.transition(gear, GearboxMachine, "undefined")
@@ -251,11 +256,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert %Gear{} = gear = Gearbox.transition!(gear, GearboxMachine, "drive")
@@ -268,11 +274,12 @@ defmodule GearboxTest do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
     end
 
     assert_raise Gearbox.InvalidTransitionError, ~r/Cannot transition from/, fn ->
@@ -283,15 +290,16 @@ defmodule GearboxTest do
   end
 
   # Success guard is anything but {:halt, reason}
-  test "guard_transition/2 when success guard should transition" do
+  test "guard_transition/3 when success guard should transition" do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
 
       def guard_transition(_struct, "neutral", _drive) do
         nil
@@ -304,15 +312,16 @@ defmodule GearboxTest do
     purge(GearboxMachine)
   end
 
-  test "guard_transition/2 when failed guard should not transition" do
+  test "guard_transition/3 when failed guard should not transition" do
     gear = %Gear{state: "neutral"}
 
     defmodule GearboxMachine do
-      use Gearbox,
-        states: ~w(neutral drive),
-        transitions: %{
-          "neutral" => ~w(drive)
-        }
+      @behaviour Gearbox.Machine
+
+      def field, do: :state
+      def states, do: ~w(neutral drive)
+      def initial_state, do: "neutral"
+      def transitions, do: %{"neutral" => ~w(drive)}
 
       def guard_transition(_struct, "neutral", _drive) do
         {:halt, "The reason is you"}

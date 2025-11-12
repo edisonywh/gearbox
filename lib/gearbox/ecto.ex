@@ -15,22 +15,24 @@ if Code.ensure_loaded?(Ecto) do
       - `{:ok, changeset}` with the transitioned field if the transition can be made
       - `{:error, error_changeset}` with an error populated if transition cannot be made.
     """
-    @spec transition_changeset(struct :: struct, machine :: any, next_state :: Gearbox.state()) ::
-            {:ok, struct | map} | {:error, Ecto.Changeset.t()}
+    @spec transition_changeset(
+            struct :: Ecto.Schema.t() | Ecto.Changeset.t(),
+            machine :: module(),
+            next_state :: Gearbox.state()
+          ) :: {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
     def transition_changeset(struct, machine, next_state) do
       validation_struct = maybe_apply_changeset_changes(struct)
 
       case validate_transition(validation_struct, machine, next_state) do
         {:ok, nil} ->
-          changeset = Ecto.Changeset.change(struct, %{machine.__machine_field__() => next_state})
+          changeset = Ecto.Changeset.change(struct, %{machine.field() => next_state})
           {:ok, changeset}
 
         {:error, reason} ->
           error_changeset =
             struct
-            |> struct()
             |> Ecto.Changeset.change()
-            |> Ecto.Changeset.add_error(machine.__machine_field__(), reason)
+            |> Ecto.Changeset.add_error(machine.field(), reason)
 
           {:error, error_changeset}
       end
